@@ -1,8 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Entry, Product, normalizeEntry } from './types';
+import { Entry, Factor, Product, normalizeEntry } from './types';
 
 const ENTRIES = 'skinlog:entries:v1';
 const PRODUCTS = 'skinlog:products:v1';
+const FACTORS = 'skinlog:factors:v1';
+const SETTINGS = 'skinlog:settings:v1';
+
+export type Settings = {
+  reminderEnabled: boolean;
+  reminderHour: number;
+  reminderMinute: number;
+};
+
+export const DEFAULT_SETTINGS: Settings = { reminderEnabled: false, reminderHour: 21, reminderMinute: 0 };
 
 export async function loadEntries(): Promise<Record<string, Entry>> {
   try {
@@ -35,4 +45,32 @@ export async function loadProducts(): Promise<Product[]> {
 
 export async function saveProducts(products: Product[]): Promise<void> {
   await AsyncStorage.setItem(PRODUCTS, JSON.stringify(products));
+}
+
+// null means the list has never been saved, so the caller seeds the defaults.
+// An empty array means the user genuinely removed everything, which is respected.
+export async function loadFactors(): Promise<Factor[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(FACTORS);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveFactors(factors: Factor[]): Promise<void> {
+  await AsyncStorage.setItem(FACTORS, JSON.stringify(factors));
+}
+
+export async function loadSettings(): Promise<Settings> {
+  try {
+    const raw = await AsyncStorage.getItem(SETTINGS);
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export async function saveSettings(settings: Settings): Promise<void> {
+  await AsyncStorage.setItem(SETTINGS, JSON.stringify(settings));
 }

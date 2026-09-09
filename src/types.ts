@@ -1,10 +1,16 @@
-export type Product = {
+// Products and factors are the same shape: a named thing you tick on a day, which
+// can be retired without disturbing the days that already reference it.
+export type Tracked = {
   id: string;
   name: string;
   archived: boolean;
   createdAt: string;
 };
 
+export type Product = Tracked;
+export type Factor = Tracked;
+
+export type ScaleKey = 'redness' | 'oiliness' | 'spots';
 export type LevelKey = 'alcohol' | 'cigarettes';
 
 export type Entry = {
@@ -15,7 +21,7 @@ export type Entry = {
   period: boolean;
   sleepHours: number | null;
   levels: Record<LevelKey, 0 | 1 | 2>; // 0 none, 1 some, 2 a lot
-  factors: string[];
+  factors: string[]; // factor ids
   products: string[]; // product ids
   notes: string;
   updatedAt: string;
@@ -27,16 +33,11 @@ export const LEVELS: { key: LevelKey; label: string; steps: [string, string] }[]
   { key: 'cigarettes', label: 'Cigarettes', steps: ['a few', 'a lot'] },
 ];
 
-// Yes/no factors. Edit this list to add or remove things you want to track.
-export const FACTORS = [
-  'Dairy',
-  'Sugar / white carbs',
-  'Fried / greasy food',
-  'Stress',
-  'Workout',
-];
+// Only used to fill the factor list the first time the app runs. After that, add
+// and remove factors on the Setup tab rather than editing this.
+export const DEFAULT_FACTORS = ['Dairy', 'Sugar / white carbs', 'Fried / greasy food', 'Stress', 'Workout'];
 
-export const SCALES: { key: 'redness' | 'oiliness' | 'spots'; label: string; low: string; high: string }[] = [
+export const SCALES: { key: ScaleKey; label: string; low: string; high: string }[] = [
   { key: 'redness', label: 'Redness and irritation', low: 'calm', high: 'angry' },
   { key: 'oiliness', label: 'Oiliness', low: 'matte', high: 'greasy' },
   { key: 'spots', label: 'New spots', low: 'none', high: 'lots' },

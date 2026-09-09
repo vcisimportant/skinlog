@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, space } from '../theme';
+import { Palette, radius, space, usePalette } from '../theme';
 
-// Chips are picked by id, not by their label, so two products sharing a name
-// still toggle independently.
+// Chips are picked by id, not by their label, so two entries sharing a name still
+// toggle independently.
 export type ChipOption = { id: string; label: string };
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
 };
 
 export function Chips({ options, selected, onToggle }: Props) {
+  const c = usePalette();
+  const styles = useMemo(() => makeStyles(c), [c]);
   return (
     <View style={styles.wrap}>
       {options.map((opt) => {
@@ -33,17 +35,18 @@ export function Chips({ options, selected, onToggle }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
-  },
-  chipOn: { backgroundColor: colors.ink, borderColor: colors.ink },
-  text: { fontSize: 15, color: colors.ink },
-  textOn: { color: '#FFFFFF' },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+    chip: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: c.line,
+      backgroundColor: c.surface,
+    },
+    chipOn: { backgroundColor: c.ink, borderColor: c.ink },
+    text: { fontSize: 15, color: c.ink },
+    textOn: { color: c.bg },
+  });

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, scaleColors, space } from '../theme';
+import { Palette, space, usePalette } from '../theme';
 
 type Props = {
   label: string;
@@ -11,6 +11,8 @@ type Props = {
 };
 
 export function Scale({ label, low, high, value, onChange }: Props) {
+  const c = usePalette();
+  const styles = useMemo(() => makeStyles(c), [c]);
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
@@ -22,12 +24,9 @@ export function Scale({ label, low, high, value, onChange }: Props) {
               key={n}
               accessibilityRole="button"
               accessibilityLabel={`${label} ${n} of 5`}
+              accessibilityState={{ selected }}
               onPress={() => onChange(selected ? null : n)}
-              style={[
-                styles.dot,
-                { borderColor: scaleColors[n - 1] },
-                selected && { backgroundColor: scaleColors[n - 1] },
-              ]}
+              style={[styles.dot, { borderColor: c.scale[n - 1] }, selected && { backgroundColor: c.scale[n - 1] }]}
             >
               <Text style={[styles.dotText, selected && styles.dotTextSelected]}>{n}</Text>
             </Pressable>
@@ -42,21 +41,22 @@ export function Scale({ label, low, high, value, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { marginBottom: space.lg },
-  label: { fontSize: 17, fontWeight: '600', color: colors.ink, marginBottom: space.sm },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  dot: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  dotText: { fontSize: 18, fontWeight: '600', color: colors.inkSoft },
-  dotTextSelected: { color: '#FFFFFF' },
-  ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs },
-  end: { fontSize: 13, color: colors.inkSoft },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    wrap: { marginBottom: space.lg },
+    label: { fontSize: 17, fontWeight: '600', color: c.ink, marginBottom: space.sm },
+    row: { flexDirection: 'row', justifyContent: 'space-between' },
+    dot: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      borderWidth: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surface,
+    },
+    dotText: { fontSize: 18, fontWeight: '600', color: c.inkSoft },
+    dotTextSelected: { color: c.onAccent },
+    ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs },
+    end: { fontSize: 13, color: c.inkSoft },
+  });

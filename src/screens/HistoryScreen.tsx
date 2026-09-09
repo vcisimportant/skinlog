@@ -1,27 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Trends } from '../components/Trends';
 import { addDays, prettyDate, todayKey } from '../dates';
-import { colors, radius, scaleColors, space } from '../theme';
-import { Entry, LEVELS, Product, SCALES } from '../types';
+import { Palette, radius, space, usePalette } from '../theme';
+import { Entry, Factor, LEVELS, Product, SCALES } from '../types';
 
 type Props = {
   entries: Record<string, Entry>;
   products: Product[];
+  factors: Factor[];
   onPickDate: (date: string) => void;
 };
 
 type Row = { date: string; entry: Entry | null };
-
-function Pip({ value }: { value: number | null }) {
-  return (
-    <View
-      style={[
-        styles.pip,
-        value ? { backgroundColor: scaleColors[value - 1] } : { borderWidth: 1, borderColor: colors.line },
-      ]}
-    />
-  );
-}
 
 // Every day from the earliest entry (or 14 days ago, whichever is earlier) up to today,
 // newest first, so gaps are visible and tappable.
@@ -37,10 +28,23 @@ function buildRows(entries: Record<string, Entry>): Row[] {
   return rows;
 }
 
-export function HistoryScreen({ entries, products, onPickDate }: Props) {
-  const productName = (id: string) => products.find((p) => p.id === id)?.name ?? 'unknown product';
-  const rows = buildRows(entries);
-  const missed = rows.filter((r) => !r.entry && r.date !== todayKey()).length;
+export function HistoryScreen({ entries, products, factors, onPickDate }: Props) {
+  const c = usePalette();
+  const styles = useMemo(() => makeStyles(c), [c]);
+  const today = todayKey();
+  const rows = useMemo(() => buildRows(entries), [entries]);
+  const missed = rows.filter((r) => !r.entry && r.date !== today).length;
+
+  const nameOf = (list: { id: string; name: string }[], id: string) =>
+    list.find((x) => x.id === id)?.name ?? 'removed';
+
+  // The value sits inside the pip, so the row still reads once the legend has
+  // scrolled off the top.
+  const Pip = ({ value }: { value: number | null }) => (
+    <View style={[styles.pip, value ? { backgroundColor: c.scale[value - 1] } : styles.pipEmpty]}>
+      {value ? <Text style={styles.pipText}>{value}</Text> : null}
+    </View>
+  );
 
   return (
     <FlatList
@@ -49,6 +53,7 @@ export function HistoryScreen({ entries, products, onPickDate }: Props) {
       contentContainerStyle={styles.container}
       ListHeaderComponent={
         <View>
+          <Trends entries={entries} />
           {missed > 0 ? (
             <Text style={styles.hint}>
               {missed} {missed === 1 ? 'day' : 'days'} not logged. Tap any day to fill it in.
@@ -92,14 +97,14 @@ export function HistoryScreen({ entries, products, onPickDate }: Props) {
                   ...LEVELS.filter((l) => e.levels[l.key] > 0).map(
                     (l) => `${l.label.toLowerCase()} (${l.steps[e.levels[l.key] - 1]})`,
                   ),
-                  ...e.factors.map((f) => f.toLowerCase()),
+                  ...e.factors.map((id) => nameOf(factors, id).toLowerCase()),
                 ]
                   .filter(Boolean)
                   .join(', ') || 'no factors logged'}
               </Text>
             ) : null}
             {e && e.products.length > 0 ? (
-              <Text style={styles.products}>{e.products.map(productName).join(', ')}</Text>
+              <Text style={styles.products}>{e.products.map((id) => nameOf(products, id)).join(', ')}</Text>
             ) : null}
             {e?.notes ? <Text style={styles.notes}>{e.notes}</Text> : null}
           </Pressable>
@@ -109,25 +114,23 @@ export function HistoryScreen({ entries, products, onPickDate }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: space.lg, paddingBottom: 48 },
-  hint: { fontSize: 14, color: colors.inkSoft, marginBottom: space.md },
-  legend: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, marginBottom: space.sm, paddingRight: 2 },
-  legendText: { fontSize: 11, color: colors.inkSoft, width: 52, textAlign: 'center' },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: space.md,
-    marginBottom: space.sm,
-  },
-  cardEmpty: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line, borderStyle: 'dashed' },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  date: { fontSize: 17, fontWeight: '600', color: colors.ink },
-  dateEmpty: { color: colors.inkSoft, fontWeight: '500' },
-  addText: { fontSize: 13, color: colors.moss },
-  pips: { flexDirection: 'row', gap: 6 },
-  pip: { width: 52, height: 14, borderRadius: 7 },
-  meta: { fontSize: 14, color: colors.inkSoft, marginTop: 6 },
-  products: { fontSize: 14, color: colors.moss, marginTop: 4 },
-  notes: { fontSize: 14, color: colors.ink, marginTop: 6 },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    container: { padding: space.lg, paddingBottom: 48 },
+    hint: { fontSize: 14, color: c.inkSoft, marginBottom: space.md, marginTop: space.sm },
+    legend: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, marginBottom: space.sm, paddingRight: 2 },
+    legendText: { fontSize: 11, color: c.inkSoft, width: 52, textAlign: 'center' },
+    card: { backgroundColor: c.surface, borderRadius: radius.card, padding: space.md, marginBottom: space.sm },
+    cardEmpty: { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.line, borderStyle: 'dashed' },
+    head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    date: { fontSize: 17, fontWeight: '600', color: c.ink },
+    dateEmpty: { color: c.inkSoft, fontWeight: '500' },
+    addText: { fontSize: 13, color: c.moss },
+    pips: { flexDirection: 'row', gap: 6 },
+    pip: { width: 52, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+    pipEmpty: { borderWidth: 1, borderColor: c.line },
+    pipText: { fontSize: 11, fontWeight: '700', color: c.onAccent },
+    meta: { fontSize: 14, color: c.inkSoft, marginTop: 6 },
+    products: { fontSize: 14, color: c.moss, marginTop: 4 },
+    notes: { fontSize: 14, color: c.ink, marginTop: 6 },
+  });

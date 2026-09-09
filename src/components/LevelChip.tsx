@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radius } from '../theme';
+import { Palette, radius, usePalette } from '../theme';
 
 type Props = {
   label: string;
@@ -11,6 +11,8 @@ type Props = {
 
 // Tap cycles: none -> some -> a lot -> none.
 export function LevelChip({ label, steps, value, onChange }: Props) {
+  const c = usePalette();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const next = ((value + 1) % 3) as 0 | 1 | 2;
   const text = value === 0 ? label : `${label}: ${steps[value - 1]}`;
   return (
@@ -25,17 +27,18 @@ export function LevelChip({ label, steps, value, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
-  },
-  some: { backgroundColor: colors.amber, borderColor: colors.amber },
-  lot: { backgroundColor: colors.flare, borderColor: colors.flare },
-  text: { fontSize: 15, color: colors.ink },
-  textOn: { color: '#FFFFFF' },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    chip: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: c.line,
+      backgroundColor: c.surface,
+    },
+    some: { backgroundColor: c.amber, borderColor: c.amber },
+    lot: { backgroundColor: c.flare, borderColor: c.flare },
+    text: { fontSize: 15, color: c.ink },
+    textOn: { color: c.onAccent },
+  });

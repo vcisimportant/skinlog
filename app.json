@@ -4,9 +4,26 @@
     "slug": "skinlog",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "splash": { "backgroundColor": "#EDF1EA" },
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.you.skinlog" },
-    "android": { "package": "com.you.skinlog", "adaptiveIcon": { "backgroundColor": "#EDF1EA" } }
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#EDF1EA",
+      "dark": {
+        "backgroundColor": "#141A16"
+      }
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.you.skinlog",
+      "userInterfaceStyle": "automatic"
+    },
+    "android": {
+      "package": "com.you.skinlog",
+      "adaptiveIcon": {
+        "backgroundColor": "#EDF1EA"
+      }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

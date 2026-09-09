@@ -5,31 +5,37 @@ import { Backup, buildBackup, parseBackup } from '../backup';
 import { buildCsv } from '../csv';
 import { todayKey } from '../dates';
 import { pickTextFile, shareText } from '../files';
-import { colors, radius, space } from '../theme';
-import { Entry, Product } from '../types';
+import { analysisPrompt } from '../prompt';
+import { Palette, radius, space, usePalette } from '../theme';
+import { Entry, Factor, Product } from '../types';
 
 type Props = {
   entries: Record<string, Entry>;
   products: Product[];
+  factors: Factor[];
   onClear: () => void;
   onRestore: (backup: Backup) => Promise<void>;
 };
 
 const reason = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong.');
 
-export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
+export function ExportScreen({ entries, products, factors, onClear, onRestore }: Props) {
+  const c = usePalette();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const [status, setStatus] = useState<string | null>(null);
   const count = Object.keys(entries).length;
-  const csv = useMemo(() => buildCsv(entries, products), [entries, products]);
+  const csv = useMemo(() => buildCsv(entries, products, factors), [entries, products, factors]);
 
   const flash = (msg: string) => {
     setStatus(msg);
     setTimeout(() => setStatus(null), 3000);
   };
 
+  // The question goes with the data, so pasting it somewhere is one step and asks
+  // for lagged correlations rather than same-day ones.
   const copy = async () => {
-    await Clipboard.setStringAsync(csv);
-    flash('Copied. Paste it into a chat to analyse.');
+    await Clipboard.setStringAsync(analysisPrompt(count) + csv);
+    flash('Copied, with the question already written. Paste it into a chat.');
   };
 
   const saveCsv = async () => {
@@ -42,7 +48,7 @@ export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
 
   const saveBackup = async () => {
     try {
-      const json = JSON.stringify(buildBackup(entries, products), null, 2);
+      const json = JSON.stringify(buildBackup(entries, products, factors), null, 2);
       await shareText(`skinlog-backup-${todayKey()}.json`, json, 'application/json', 'public.json');
     } catch (e) {
       flash(reason(e));
@@ -90,12 +96,12 @@ export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
       <Text style={styles.countLabel}>{count === 1 ? 'day logged' : 'days logged'}</Text>
 
       <Text style={styles.body}>
-        The export is a CSV with one row per day. Cycle day is worked out automatically from the days you marked as period.
-        Alcohol and cigarettes are 0, 1 or 2 (none, some, a lot). Each product gets its own column, including removed ones.
+        One row per day. Copying puts a written question above the data, so whoever reads it knows the scales run 1
+        (best) to 5 (worst) and looks for delayed effects rather than same-day ones.
       </Text>
 
       <Pressable accessibilityRole="button" onPress={copy} disabled={count === 0} style={[styles.primary, count === 0 && styles.disabled]}>
-        <Text style={styles.primaryText}>Copy CSV to clipboard</Text>
+        <Text style={styles.primaryText}>Copy for analysis</Text>
       </Pressable>
       <Pressable accessibilityRole="button" onPress={saveCsv} disabled={count === 0} style={[styles.secondary, count === 0 && styles.disabled]}>
         <Text style={styles.secondaryText}>Save the CSV as a file</Text>
@@ -114,12 +120,7 @@ export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
         Your diary lives only on this phone. A backup is a single file you can keep in Files, Drive or your email, and
         restore onto a new phone. The CSV is for analysis; the backup is what brings your data back.
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={saveBackup}
-        disabled={count === 0}
-        style={[styles.secondary, count === 0 && styles.disabled]}
-      >
+      <Pressable accessibilityRole="button" onPress={saveBackup} disabled={count === 0} style={[styles.secondary, count === 0 && styles.disabled]}>
         <Text style={styles.secondaryText}>Save a backup file</Text>
       </Pressable>
       <Pressable accessibilityRole="button" onPress={restore} style={styles.secondary}>
@@ -133,28 +134,29 @@ export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: space.lg, paddingBottom: 48 },
-  count: { fontSize: 64, fontWeight: '700', color: colors.ink, letterSpacing: -2, lineHeight: 70 },
-  countLabel: { fontSize: 17, color: colors.inkSoft, marginBottom: space.lg },
-  heading: { fontSize: 20, fontWeight: '700', color: colors.ink, marginTop: space.xl, marginBottom: space.sm },
-  body: { fontSize: 15, color: colors.ink, lineHeight: 22, marginBottom: space.lg },
-  primary: { backgroundColor: colors.moss, borderRadius: radius.card, paddingVertical: 16, alignItems: 'center' },
-  primaryText: { color: '#FFFFFF', fontSize: 17, fontWeight: '600' },
-  secondary: {
-    marginTop: space.sm,
-    borderRadius: radius.card,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.moss,
-  },
-  secondaryText: { color: colors.moss, fontSize: 17, fontWeight: '600' },
-  disabled: { opacity: 0.4 },
-  status: { marginTop: space.md, color: colors.moss, fontSize: 15, textAlign: 'center' },
-  previewWrap: { marginTop: space.xl, backgroundColor: colors.surface, borderRadius: radius.card, padding: space.md },
-  previewLabel: { fontSize: 13, color: colors.inkSoft, marginBottom: space.sm },
-  preview: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 12, color: colors.ink, lineHeight: 18 },
-  danger: { marginTop: space.xl, alignItems: 'center', paddingVertical: 12 },
-  dangerText: { color: colors.flare, fontSize: 15 },
-});
+const makeStyles = (c: Palette) =>
+  StyleSheet.create({
+    container: { padding: space.lg, paddingBottom: 48 },
+    count: { fontSize: 64, fontWeight: '700', color: c.ink, letterSpacing: -2, lineHeight: 70 },
+    countLabel: { fontSize: 17, color: c.inkSoft, marginBottom: space.lg },
+    heading: { fontSize: 20, fontWeight: '700', color: c.ink, marginTop: space.xl, marginBottom: space.sm },
+    body: { fontSize: 15, color: c.ink, lineHeight: 22, marginBottom: space.lg },
+    primary: { backgroundColor: c.moss, borderRadius: radius.card, paddingVertical: 16, alignItems: 'center' },
+    primaryText: { color: c.onAccent, fontSize: 17, fontWeight: '600' },
+    secondary: {
+      marginTop: space.sm,
+      borderRadius: radius.card,
+      paddingVertical: 16,
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: c.moss,
+    },
+    secondaryText: { color: c.moss, fontSize: 17, fontWeight: '600' },
+    disabled: { opacity: 0.4 },
+    status: { marginTop: space.md, color: c.moss, fontSize: 15, textAlign: 'center' },
+    previewWrap: { marginTop: space.xl, backgroundColor: c.surface, borderRadius: radius.card, padding: space.md },
+    previewLabel: { fontSize: 13, color: c.inkSoft, marginBottom: space.sm },
+    preview: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontSize: 12, color: c.ink, lineHeight: 18 },
+    danger: { marginTop: space.xl, alignItems: 'center', paddingVertical: 12 },
+    dangerText: { color: c.flare, fontSize: 15 },
+  });
