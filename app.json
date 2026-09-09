@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Skinlog",
+    "slug": "skinlog",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": { "backgroundColor": "#EDF1EA" },
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.you.skinlog" },
+    "android": { "package": "com.you.skinlog", "adaptiveIcon": { "backgroundColor": "#EDF1EA" } }
+  }
+}
