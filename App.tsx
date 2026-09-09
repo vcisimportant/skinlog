@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, AppState, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Backup } from './src/backup';
 import { ExportScreen } from './src/screens/ExportScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { ProductsScreen } from './src/screens/ProductsScreen';
@@ -24,25 +25,66 @@ export default function App() {
   const [date, setDate] = useState(todayKey());
   const [products, setProducts] = useState<Product[]>([]);
 
+  // Mirrors of the state, so a save that lands while another is in flight builds
+  // on the newer value rather than on whatever this render closed over.
+  const entriesRef = useRef<Record<string, Entry>>({});
+  const productsRef = useRef<Product[]>([]);
+
   useEffect(() => {
-    loadProducts().then(setProducts);
-    loadEntries().then(setEntries);
+    loadProducts().then((p) => {
+      productsRef.current = p;
+      setProducts(p);
+    });
+    loadEntries().then((e) => {
+      entriesRef.current = e;
+      setEntries(e);
+    });
   }, []);
 
-  const handleSave = async (e: Entry) => {
-    const next = { ...(entries ?? {}), [e.date]: e };
+  // The day does not change while the app sits open overnight, so catch up when
+  // it comes back to the foreground — but only if today is what is on screen.
+  const shownTodayRef = useRef(todayKey());
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      const now = todayKey();
+      const wasToday = shownTodayRef.current;
+      if (now === wasToday) return;
+      shownTodayRef.current = now;
+      setDate((d) => (d === wasToday ? now : d));
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Rejections are deliberately passed on: the Today screen shows a save failure
+  // rather than telling you it saved when it did not.
+  const handleSave = (e: Entry) => {
+    const next = { ...entriesRef.current, [e.date]: e };
+    entriesRef.current = next;
     setEntries(next);
-    await saveEntries(next);
+    return saveEntries(next);
   };
 
-  const handleProducts = async (next: Product[]) => {
+  const handleProducts = (next: Product[]) => {
+    productsRef.current = next;
     setProducts(next);
-    await saveProducts(next);
+    saveProducts(next).catch(() =>
+      Alert.alert('Could not save', 'Your products could not be written to this phone.'),
+    );
   };
 
   const handleClear = async () => {
+    entriesRef.current = {};
     setEntries({});
     await clearEntries();
+  };
+
+  const handleRestore = async (backup: Backup) => {
+    entriesRef.current = backup.entries;
+    productsRef.current = backup.products;
+    setEntries(backup.entries);
+    setProducts(backup.products);
+    await Promise.all([saveEntries(backup.entries), saveProducts(backup.products)]);
   };
 
   return (
@@ -68,7 +110,9 @@ export default function App() {
             />
           )}
           {tab === 'products' && <ProductsScreen products={products} onChange={handleProducts} />}
-          {tab === 'export' && <ExportScreen entries={entries} products={products} onClear={handleClear} />}
+          {tab === 'export' && (
+            <ExportScreen entries={entries} products={products} onClear={handleClear} onRestore={handleRestore} />
+          )}
         </View>
       )}
       <View style={styles.tabs}>

@@ -1,24 +1,30 @@
 import * as Clipboard from 'expo-clipboard';
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, space } from '../theme';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Backup, buildBackup, parseBackup } from '../backup';
 import { buildCsv } from '../csv';
+import { todayKey } from '../dates';
+import { pickTextFile, shareText } from '../files';
+import { colors, radius, space } from '../theme';
 import { Entry, Product } from '../types';
 
 type Props = {
   entries: Record<string, Entry>;
   products: Product[];
   onClear: () => void;
+  onRestore: (backup: Backup) => Promise<void>;
 };
 
-export function ExportScreen({ entries, products, onClear }: Props) {
+const reason = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong.');
+
+export function ExportScreen({ entries, products, onClear, onRestore }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const count = Object.keys(entries).length;
   const csv = useMemo(() => buildCsv(entries, products), [entries, products]);
 
   const flash = (msg: string) => {
     setStatus(msg);
-    setTimeout(() => setStatus(null), 2000);
+    setTimeout(() => setStatus(null), 3000);
   };
 
   const copy = async () => {
@@ -26,16 +32,54 @@ export function ExportScreen({ entries, products, onClear }: Props) {
     flash('Copied. Paste it into a chat to analyse.');
   };
 
-  const share = async () => {
+  const saveCsv = async () => {
     try {
-      await Share.share({ message: csv, title: 'Skinlog export' });
-    } catch {
-      flash('Could not open the share sheet.');
+      await shareText(`skinlog-${todayKey()}.csv`, csv, 'text/csv', 'public.comma-separated-values-text');
+    } catch (e) {
+      flash(reason(e));
     }
   };
 
+  const saveBackup = async () => {
+    try {
+      const json = JSON.stringify(buildBackup(entries, products), null, 2);
+      await shareText(`skinlog-backup-${todayKey()}.json`, json, 'application/json', 'public.json');
+    } catch (e) {
+      flash(reason(e));
+    }
+  };
+
+  const restore = async () => {
+    let backup: Backup;
+    try {
+      const raw = await pickTextFile();
+      if (raw === null) return;
+      backup = parseBackup(raw);
+    } catch (e) {
+      Alert.alert('Could not restore', reason(e));
+      return;
+    }
+    const days = Object.keys(backup.entries).length;
+    Alert.alert(
+      'Restore this backup?',
+      `The file holds ${days} ${days === 1 ? 'day' : 'days'}. Restoring replaces everything currently on this phone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore',
+          style: 'destructive',
+          onPress: () =>
+            onRestore(backup).then(
+              () => flash(`Restored ${days} ${days === 1 ? 'day' : 'days'}.`),
+              (e) => Alert.alert('Could not restore', reason(e)),
+            ),
+        },
+      ],
+    );
+  };
+
   const confirmClear = () =>
-    Alert.alert('Delete all entries?', 'This removes every logged day from this phone. Export first if you want to keep them.', [
+    Alert.alert('Delete all entries?', 'This removes every logged day from this phone. Save a backup first if you want to keep them.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete all', style: 'destructive', onPress: onClear },
     ]);
@@ -53,8 +97,8 @@ export function ExportScreen({ entries, products, onClear }: Props) {
       <Pressable accessibilityRole="button" onPress={copy} disabled={count === 0} style={[styles.primary, count === 0 && styles.disabled]}>
         <Text style={styles.primaryText}>Copy CSV to clipboard</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={share} disabled={count === 0} style={[styles.secondary, count === 0 && styles.disabled]}>
-        <Text style={styles.secondaryText}>Share as text</Text>
+      <Pressable accessibilityRole="button" onPress={saveCsv} disabled={count === 0} style={[styles.secondary, count === 0 && styles.disabled]}>
+        <Text style={styles.secondaryText}>Save the CSV as a file</Text>
       </Pressable>
       {status ? <Text style={styles.status}>{status}</Text> : null}
 
@@ -64,6 +108,23 @@ export function ExportScreen({ entries, products, onClear }: Props) {
           <Text style={styles.preview}>{count === 0 ? 'No data yet.' : csv.split('\n').slice(0, 6).join('\n')}</Text>
         </ScrollView>
       </View>
+
+      <Text style={styles.heading}>Backup</Text>
+      <Text style={styles.body}>
+        Your diary lives only on this phone. A backup is a single file you can keep in Files, Drive or your email, and
+        restore onto a new phone. The CSV is for analysis; the backup is what brings your data back.
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={saveBackup}
+        disabled={count === 0}
+        style={[styles.secondary, count === 0 && styles.disabled]}
+      >
+        <Text style={styles.secondaryText}>Save a backup file</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={restore} style={styles.secondary}>
+        <Text style={styles.secondaryText}>Restore from a backup</Text>
+      </Pressable>
 
       <Pressable accessibilityRole="button" onPress={confirmClear} style={styles.danger}>
         <Text style={styles.dangerText}>Delete all entries</Text>
@@ -76,6 +137,7 @@ const styles = StyleSheet.create({
   container: { padding: space.lg, paddingBottom: 48 },
   count: { fontSize: 64, fontWeight: '700', color: colors.ink, letterSpacing: -2, lineHeight: 70 },
   countLabel: { fontSize: 17, color: colors.inkSoft, marginBottom: space.lg },
+  heading: { fontSize: 20, fontWeight: '700', color: colors.ink, marginTop: space.xl, marginBottom: space.sm },
   body: { fontSize: 15, color: colors.ink, lineHeight: 22, marginBottom: space.lg },
   primary: { backgroundColor: colors.moss, borderRadius: radius.card, paddingVertical: 16, alignItems: 'center' },
   primaryText: { color: '#FFFFFF', fontSize: 17, fontWeight: '600' },
