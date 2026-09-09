@@ -3,7 +3,7 @@ import { buildBackup, parseBackup } from './backup';
 import { emptyEntry } from './types';
 
 const validRaw = () =>
-  JSON.stringify(buildBackup({ '2026-09-01': emptyEntry('2026-09-01') }, []));
+  JSON.stringify(buildBackup({ '2026-09-01': emptyEntry('2026-09-01') }, [], []));
 
 describe('parseBackup', () => {
   test('reads back what buildBackup wrote', () => {
@@ -36,5 +36,17 @@ describe('parseBackup', () => {
     const withProduct = JSON.parse(validRaw());
     withProduct.products = [{ id: 'p1', name: 'Cerave', archived: false, createdAt: '2026-01-01T00:00:00.000Z' }];
     expect(parseBackup(JSON.stringify(withProduct)).products).toHaveLength(1);
+  });
+
+  test('carries the factor list, without which restored days name nothing', () => {
+    const withFactor = JSON.parse(validRaw());
+    withFactor.factors = [{ id: 'f1', name: 'Dairy', archived: false, createdAt: '2026-01-01T00:00:00.000Z' }];
+    expect(parseBackup(JSON.stringify(withFactor)).factors).toHaveLength(1);
+  });
+
+  test('an older backup with no factor list restores with an empty one rather than failing', () => {
+    const old = JSON.parse(validRaw());
+    delete old.factors;
+    expect(parseBackup(JSON.stringify(old)).factors).toEqual([]);
   });
 });

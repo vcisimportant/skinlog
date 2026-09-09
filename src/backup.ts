@@ -1,4 +1,4 @@
-import { Entry, Product, normalizeEntry } from './types';
+import { Entry, Factor, Product, Tracked, normalizeEntry } from './types';
 
 export type Backup = {
   app: 'skinlog';
@@ -6,13 +6,27 @@ export type Backup = {
   exportedAt: string;
   entries: Record<string, Entry>;
   products: Product[];
+  factors: Factor[];
 };
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
-export function buildBackup(entries: Record<string, Entry>, products: Product[]): Backup {
-  return { app: 'skinlog', version: 1, exportedAt: new Date().toISOString(), entries, products };
+export function buildBackup(
+  entries: Record<string, Entry>,
+  products: Product[],
+  factors: Factor[],
+): Backup {
+  return { app: 'skinlog', version: 1, exportedAt: new Date().toISOString(), entries, products, factors };
 }
+
+// Days reference products and factors by id, so a backup is only restorable if it
+// carries the lists too.
+const trackedList = (value: unknown): Tracked[] =>
+  Array.isArray(value)
+    ? value
+        .filter((t): t is Tracked => !!t && typeof t.id === 'string' && typeof t.name === 'string')
+        .map((t) => ({ ...t, archived: !!t.archived, createdAt: t.createdAt ?? new Date().toISOString() }))
+    : [];
 
 // Restoring replaces everything that is currently on the phone, so anything not
 // clearly a Skinlog backup is rejected outright rather than half-imported. The
@@ -41,15 +55,12 @@ export function parseBackup(raw: string): Backup {
     entries[date] = normalizeEntry({ ...(value as Partial<Entry>), date });
   }
 
-  const products = b.products
-    .filter((p): p is Product => !!p && typeof p.id === 'string' && typeof p.name === 'string')
-    .map((p) => ({ ...p, archived: !!p.archived, createdAt: p.createdAt ?? new Date().toISOString() }));
-
   return {
     app: 'skinlog',
     version: 1,
     exportedAt: typeof b.exportedAt === 'string' ? b.exportedAt : new Date().toISOString(),
     entries,
-    products,
+    products: trackedList(b.products),
+    factors: trackedList(b.factors),
   };
 }
