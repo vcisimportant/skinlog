@@ -1,74 +1,15 @@
 import * as Clipboard from 'expo-clipboard';
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import { daysBetween } from '../dates';
 import { colors, radius, space } from '../theme';
-import { Entry, FACTORS, LEVELS, Product } from '../types';
+import { buildCsv } from '../csv';
+import { Entry, Product } from '../types';
 
 type Props = {
   entries: Record<string, Entry>;
   products: Product[];
   onClear: () => void;
 };
-
-// Cycle day = days since the first day of the most recent period run.
-// A "run" starts on a period day that was not preceded by a period day.
-function cycleDays(sorted: Entry[]): Record<string, number | ''> {
-  const out: Record<string, number | ''> = {};
-  let lastStart: string | null = null;
-  let prevWasPeriod = false;
-  for (const e of sorted) {
-    if (e.period && !prevWasPeriod) lastStart = e.date;
-    out[e.date] = lastStart ? daysBetween(lastStart, e.date) + 1 : '';
-    prevWasPeriod = e.period;
-  }
-  return out;
-}
-
-function csvCell(v: string | number | boolean | null | ''): string {
-  if (v === null || v === '') return '';
-  const s = typeof v === 'boolean' ? (v ? '1' : '0') : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-export function buildCsv(entries: Record<string, Entry>, products: Product[]): string {
-  const sorted = Object.values(entries).sort((a, b) => (a.date < b.date ? -1 : 1));
-  const cycle = cycleDays(sorted);
-  // Include archived products too so old days keep their columns.
-  const used = new Set(sorted.flatMap((e) => e.products));
-  const cols = products.filter((p) => !p.archived || used.has(p.id));
-  const header = [
-    'date',
-    'redness',
-    'oiliness',
-    'spots',
-    'period',
-    'cycle_day',
-    'sleep_hours',
-    ...LEVELS.map((l) => slug(l.label)),
-    ...FACTORS.map(slug),
-    ...cols.map((p) => `product_${slug(p.name)}`),
-    'notes',
-  ];
-  const rows = sorted.map((e) => [
-    e.date,
-    e.redness,
-    e.oiliness,
-    e.spots,
-    e.period,
-    cycle[e.date],
-    e.sleepHours,
-    ...LEVELS.map((l) => e.levels[l.key]),
-    ...FACTORS.map((f) => e.factors.includes(f)),
-    ...cols.map((p) => e.products.includes(p.id)),
-    e.notes,
-  ]);
-  return [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
-}
-
-function slug(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
 
 export function ExportScreen({ entries, products, onClear }: Props) {
   const [status, setStatus] = useState<string | null>(null);
