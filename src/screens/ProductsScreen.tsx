@@ -28,6 +28,12 @@ export function ProductsScreen({ products, onChange }: Props) {
   const add = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    // Two products with the same name are indistinguishable in the picker and
+    // collide into one column in the export, so keep the names unique.
+    if (products.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
+      Alert.alert('Already on the list', `You already have a product called "${trimmed}".`);
+      return;
+    }
     onChange([...products, { id: newId(), name: trimmed, archived: false, createdAt: new Date().toISOString() }]);
     setName('');
   };

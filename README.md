@@ -12,13 +12,14 @@ Everything is stored on the phone only. No accounts, no server.
 
    ```bash
    npm install
-   npx expo install --fix   # aligns package versions with the Expo SDK
    npx expo start
    ```
 
 4. Scan the QR code with Expo Go (Android) or the Camera app (iOS).
 
-Expo Go is enough for daily use; the data persists as long as the app stays installed.
+Expo Go is enough for daily use. Everything you log is written to the phone as you type it — there is no
+save button, and the day you are editing is stored when you leave it, switch tabs or close the app. The data
+survives closing the app but not uninstalling it, so see **Backups** below.
 
 ## Build a real installable app
 
@@ -38,6 +39,18 @@ Change `bundleIdentifier` / `package` in `app.json` to something unique before b
 
 Add the products you use on the **Products** tab. Each becomes a chip on the Today screen. "Remove" hides a product from the picker without touching past entries; removed products can be restored, and still get a column in the export.
 
+## Backups
+
+Your diary lives on this phone and nowhere else. On the **Export** tab:
+
+- **Save a backup file** writes a single `.json` file and opens the share sheet, so you can keep it in Files,
+  Drive or your own email. Do this occasionally, and before changing phones.
+- **Restore from a backup** reads one back. It replaces everything currently on the phone, and asks first,
+  showing how many days the file holds. A file that is not a Skinlog backup is refused rather than
+  half-imported.
+
+The CSV is for analysis; the backup is what brings your data back.
+
 ## Customise what you track
 
 - **Yes/no factors (the chips):** edit the `FACTORS` list in `src/types.ts`. New columns appear in the CSV automatically.
@@ -55,8 +68,22 @@ date,redness,oiliness,spots,period,cycle_day,sleep_hours,alcohol,cigarettes,dair
 ```
 
 - Skin scores are 1 (best) to 5 (worst), blank if skipped.
-- `period` is 1 on days you toggled it on. `cycle_day` is derived: day 1 is the first day of your most recent period, so you never type it yourself.
+- `period` is 1 on days you toggled it on. `cycle_day` is derived: day 1 is the first day of your most recent
+  period, so you never type it yourself. A new period is taken to have started when no period day has been
+  logged for 10 days, so forgetting to log a day mid-period does not restart the count, and a gap in logging
+  between two periods does not merge them. Past 60 days the count is left blank rather than exported as a
+  number that is almost certainly a period you forgot to log.
 - `alcohol` and `cigarettes` are 0 (none), 1 (some) or 2 (a lot).
 - Factor and product columns are 1/0. Removed products keep their column so older rows stay complete.
 
 Tip for analysis: skin usually reacts to food and hormones with a delay of a few days to two weeks, so ask for correlations with factors lagged by 1, 3, 7 and 14 days, not just the same day.
+
+## Running the tests
+
+The date maths, the CSV export and the backup reader are covered by tests:
+
+```bash
+npm test
+```
+
+Worth running if you edit `FACTORS`, `LEVELS` or `SCALES`, or anything under `src/`.
