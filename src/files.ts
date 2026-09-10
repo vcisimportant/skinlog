@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 // Writes a real file and opens the share sheet, so the result can be saved to
@@ -10,10 +10,11 @@ export async function shareText(
   mimeType: string,
   uti: string,
 ): Promise<void> {
-  const uri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.writeAsStringAsync(uri, contents);
+  const file = new File(Paths.cache, filename);
+  file.create({ overwrite: true });
+  file.write(contents);
   if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device.');
-  await Sharing.shareAsync(uri, { mimeType, UTI: uti, dialogTitle: filename });
+  await Sharing.shareAsync(file.uri, { mimeType, UTI: uti, dialogTitle: filename });
 }
 
 // Returns null when the picker was dismissed. Deliberately unfiltered: a backup
@@ -21,5 +22,5 @@ export async function shareText(
 export async function pickTextFile(): Promise<string | null> {
   const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
   if (res.canceled || !res.assets?.length) return null;
-  return FileSystem.readAsStringAsync(res.assets[0].uri);
+  return new File(res.assets[0].uri).text();
 }
