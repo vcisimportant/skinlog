@@ -13,17 +13,19 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.you.skinlog",
+      "bundleIdentifier": "io.github.vcisimportant.skinlog",
       "userInterfaceStyle": "automatic"
     },
     "android": {
-      "package": "com.you.skinlog",
+      "package": "io.github.vcisimportant.skinlog",
       "adaptiveIcon": {
-        "backgroundColor": "#EDF1EA"
+        "backgroundColor": "#EDF1EA",
+        "foregroundImage": "./assets/icon.png"
       }
     },
     "plugins": [
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }
