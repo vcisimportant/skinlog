@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Backup } from './src/backup';
 import { todayKey } from './src/dates';
+import { notify } from './src/dialog';
 import { migrateFactors, seedFactors } from './src/factors';
 import { requestPersistence } from './src/kv';
 import { applyReminder } from './src/notifications';
@@ -113,13 +114,13 @@ export default function App() {
   const handleProducts = (next: Product[]) => {
     productsRef.current = next;
     setProducts(next);
-    saveProducts(next).catch(() => Alert.alert('Could not save', 'Your products could not be written to this phone.'));
+    saveProducts(next).catch(() => notify('Could not save', 'Your products could not be written to this phone.'));
   };
 
   const handleFactors = (next: Factor[]) => {
     factorsRef.current = next;
     setFactors(next);
-    saveFactors(next).catch(() => Alert.alert('Could not save', 'Your factors could not be written to this phone.'));
+    saveFactors(next).catch(() => notify('Could not save', 'Your factors could not be written to this phone.'));
   };
 
   // A switch that is on but silent is worse than one that admits it is off, so a
@@ -131,7 +132,7 @@ export default function App() {
     const off = { ...next, reminderEnabled: false };
     setSettings(off);
     await saveSettings(off);
-    Alert.alert(
+    notify(
       'Notifications are turned off',
       'Allow notifications for Skinlog in the iPhone Settings app, then switch the reminder back on.',
     );

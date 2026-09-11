@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { todayKey } from '../dates';
+import { confirm, notify } from '../dialog';
 import { describeAge, daysSinceAdded } from '../tracked';
 import { Palette, radius, space, usePalette } from '../theme';
 import { Tracked, newId } from '../types';
@@ -32,7 +33,7 @@ export function TrackedList({ title, intro, placeholder, removeNote, items, onCh
     // Duplicates are indistinguishable in the picker and collide into one column
     // in the export, so keep the names unique.
     if (items.some((i) => i.name.toLowerCase() === trimmed.toLowerCase())) {
-      Alert.alert('Already on the list', `You already have "${trimmed}".`);
+      notify('Already on the list', `You already have "${trimmed}".`);
       return;
     }
     onChange([...items, { id: newId(), name: trimmed, archived: false, createdAt: new Date().toISOString() }]);
@@ -42,11 +43,15 @@ export function TrackedList({ title, intro, placeholder, removeNote, items, onCh
   const setArchived = (id: string, archived: boolean) =>
     onChange(items.map((i) => (i.id === id ? { ...i, archived } : i)));
 
-  const confirmArchive = (item: Tracked) =>
-    Alert.alert(`Remove ${item.name}?`, removeNote, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => setArchived(item.id, true) },
-    ]);
+  const confirmArchive = async (item: Tracked) => {
+    const ok = await confirm({
+      title: `Remove ${item.name}?`,
+      message: removeNote,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (ok) setArchived(item.id, true);
+  };
 
   return (
     <View style={styles.wrap}>

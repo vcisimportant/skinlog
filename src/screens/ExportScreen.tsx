@@ -1,10 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Backup, buildBackup, parseBackup } from '../backup';
 import { backupStatus } from '../backupHealth';
 import { buildCsv } from '../csv';
 import { todayKey } from '../dates';
+import { confirm, notify } from '../dialog';
 import { pickTextFile, shareText } from '../files';
 import { analysisPrompt } from '../prompt';
 import { Palette, radius, space, usePalette } from '../theme';
@@ -83,33 +84,34 @@ export function ExportScreen({
       if (raw === null) return;
       backup = parseBackup(raw);
     } catch (e) {
-      Alert.alert('Could not restore', reason(e));
+      notify('Could not restore', reason(e));
       return;
     }
     const days = Object.keys(backup.entries).length;
-    Alert.alert(
-      'Restore this backup?',
-      `The file holds ${days} ${days === 1 ? 'day' : 'days'}. Restoring replaces everything currently on this phone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Restore',
-          style: 'destructive',
-          onPress: () =>
-            onRestore(backup).then(
-              () => flash(`Restored ${days} ${days === 1 ? 'day' : 'days'}.`),
-              (e) => Alert.alert('Could not restore', reason(e)),
-            ),
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: 'Restore this backup?',
+      message: `The file holds ${days} ${days === 1 ? 'day' : 'days'}. Restoring replaces everything currently on this phone.`,
+      confirmLabel: 'Restore',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await onRestore(backup);
+      flash(`Restored ${days} ${days === 1 ? 'day' : 'days'}.`);
+    } catch (e) {
+      notify('Could not restore', reason(e));
+    }
   };
 
-  const confirmClear = () =>
-    Alert.alert('Delete all entries?', 'This removes every logged day from this phone. Save a backup first if you want to keep them.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete all', style: 'destructive', onPress: onClear },
-    ]);
+  const confirmClear = async () => {
+    const ok = await confirm({
+      title: 'Delete all entries?',
+      message: 'This removes every logged day from this phone. Save a backup first if you want to keep them.',
+      confirmLabel: 'Delete all',
+      destructive: true,
+    });
+    if (ok) onClear();
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

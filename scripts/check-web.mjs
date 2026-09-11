@@ -51,6 +51,47 @@ try {
     };
   });
 
+  // react-native-web's Alert is a no-op, so every confirmation has to be driven
+  // through the browser's own dialog to prove it actually fires.
+  let dialogSeen = null;
+  page.on('dialog', async (d) => {
+    dialogSeen = d.message().split('\n')[0];
+    await d.accept();
+  });
+
+  // A Pressable's containing row often reads as the same text (its input
+  // contributes none), so anything wide enough to be a row is excluded and the
+  // topmost of what is left is taken — that is the actual control.
+  const tap = async (label) => {
+    const box = await page.evaluate((text) => {
+      const hits = [...document.querySelectorAll('div,span')]
+        .filter((e) => e.textContent?.trim() === text)
+        .map((e) => e.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0 && r.width < 150)
+        .sort((a, z) => a.y - z.y);
+      if (!hits.length) return null;
+      const r = hits[0];
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }, label);
+    if (!box) throw new Error(`could not find a tappable "${label}"`);
+    await page.mouse.click(box.x, box.y);
+    await new Promise((r) => setTimeout(r, 700));
+  };
+
+  await tap('Setup');
+  await page.waitForSelector('input');
+  await page.type('input', 'Test Serum');
+  await tap('Add');
+  const added = (await page.evaluate(() => document.body.innerText)).includes('Test Serum');
+
+  await tap('Remove');
+  await new Promise((r) => setTimeout(r, 800));
+  const stillThere = (await page.evaluate(() => document.body.innerText)).includes('Test Serum');
+
+  console.log('product added:       ', added ? 'yes' : 'NO');
+  console.log('confirm dialog:      ', dialogSeen ?? 'NONE SHOWN');
+  console.log('removed after accept:', !stillThere ? 'yes' : 'NO - still listed');
+
   await page.screenshot({ path: '/tmp/skinlog-check.png' });
 
   console.log('rendered:            yes');
