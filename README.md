@@ -1,52 +1,67 @@
 # Skinlog
 
 A one-minute-a-day skin diary. Log how your skin looks (redness, oiliness, new spots on a 1–5 scale), tick what
-happened that day (alcohol, dairy, stress, a new product…), sleep and period. The app reminds you, shows you how
-the last two months went and how your skin moves across your cycle, and exports everything as CSV to paste into
-Claude or a spreadsheet.
+happened that day (alcohol, dairy, stress, a new product…), sleep and period. It shows you how the last two months
+went and how your skin moves across your cycle, and exports everything as CSV to paste into Claude or a spreadsheet.
 
 Everything is stored on the phone only. No accounts, no server.
 
-## Run it on your phone (fastest)
+## Use it on your phone
 
-1. Install [Node.js](https://nodejs.org) (LTS) on your computer.
-2. Install the **Expo Go** app on your phone (App Store / Play Store).
-3. In this folder:
+Skinlog runs as a web app, installed to your Home Screen. No App Store, no Apple developer
+account, nothing to pay.
 
-   ```bash
-   npm install
-   npx expo start
-   ```
+1. Open **https://YOUR-GITHUB-USERNAME.github.io/skinlog/** in Safari on the iPhone.
+2. Tap the **Share** button, then **Add to Home Screen**.
+3. Open it from the icon, not from Safari.
 
-4. Scan the QR code with Expo Go (Android) or the Camera app (iOS).
+From then on it behaves like an app: its own icon, full screen, and it works with no signal —
+the whole thing is cached on the phone the first time you open it.
 
-Everything you log is written to the phone as you type it — there is no save button, and the day you are editing
-is stored when you leave it, switch tabs or close the app. The data survives closing the app but not uninstalling
-it, so see **Backups** below.
+Opening it from the Home Screen rather than a Safari tab matters. It is what makes iOS treat
+your data as real app data rather than as a browser cache it can clear.
 
-Daily reminders are more reliable in a real build than in Expo Go. If the reminder is the feature you care about,
-build the app properly (next section).
+**Daily reminders do not work on the web.** iOS browsers cannot schedule them, so the reminder
+section is hidden. Everything else works.
 
-## Build a real installable app
+## Where your data lives
 
-When you want an icon on the home screen without Expo Go:
+On your phone, in the browser's IndexedDB, and nowhere else. Nothing is uploaded, there is no
+server and no account. The site is only code — opening the URL on another device shows an
+empty diary.
+
+The app asks iOS to mark that storage as persistent, which it generally grants once the app is
+on your Home Screen and used regularly. That protects it from routine clean-ups, but it is not
+an absolute guarantee: iOS can still clear it if the phone is critically low on storage, or if
+you clear website data by hand.
+
+So: **the working copy is on the phone, the backup file is the archive.** On the Export tab,
+**Save a backup file** and keep it in iCloud Drive. The app tracks when you last did this and
+nags you on the Export tab after a fortnight, because the gap since your last backup is the
+most you can lose. It also refuses to let you overwrite a good backup with a smaller one, which
+is the trap if your data ever does get cleared — restore first, back up after.
+
+## Working on it
 
 ```bash
-npm install -g eas-cli
-eas login            # free Expo account
-eas build:configure
-eas build -p ios --profile preview       # needs an Apple developer account
-eas build -p android --profile preview   # gives you an .apk to install directly
+npm install
+npm test              # the pure logic
+npm run build:web     # produces dist-web/
 ```
 
-Change `bundleIdentifier` / `package` in `app.json` to something unique before building.
+`npx expo start` runs it through Expo Go for quick iteration, and the code still builds as a
+real iOS app if you ever get an Apple developer account.
+
+Pushing to `main` builds and deploys the web app to GitHub Pages automatically
+(`.github/workflows/deploy-web.yml`), running the typecheck and the tests first. Enable it once
+under **Settings → Pages → Source: GitHub Actions**.
 
 ## The Setup tab
 
 Three things live here.
 
-- **Daily reminder** — one notification a day at a time you choose. The first time you switch it on, the phone
-  asks permission; if you refuse, the switch turns itself back off rather than pretending to be on.
+- **Daily reminder** — one notification a day at a time you choose. Only in a real iOS build; the section is
+  hidden in the web app, because browsers on iOS cannot schedule one.
 - **Products** — everything you put on your face. Each becomes a chip on the Today screen. Anything added in the
   last three weeks is flagged on the day you tick it, because a new product is the obvious suspect when skin turns.
 - **Things that happened** — the yes/no chips: food, stress, anything you suspect. Add and remove them here; new

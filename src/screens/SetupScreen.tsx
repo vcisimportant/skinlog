@@ -1,9 +1,9 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useMemo } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { ReminderCard } from '../components/ReminderCard';
 import { TrackedList } from '../components/TrackedList';
 import { Settings } from '../storage';
-import { Palette, radius, space, usePalette } from '../theme';
+import { Palette, space, usePalette } from '../theme';
 import { Factor, Product } from '../types';
 
 type Props = {
@@ -26,47 +26,10 @@ export function SetupScreen({
   const c = usePalette();
   const styles = useMemo(() => makeStyles(c), [c]);
 
-  const time = useMemo(() => {
-    const d = new Date();
-    d.setHours(settings.reminderHour, settings.reminderMinute, 0, 0);
-    return d;
-  }, [settings.reminderHour, settings.reminderMinute]);
-
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Text style={styles.title}>Daily reminder</Text>
-          <Text style={styles.intro}>
-            A diary only works if it gets written. One notification a day, at a time that suits you.
-          </Text>
-          <View style={styles.reminderRow}>
-            <Text style={styles.reminderLabel}>Remind me</Text>
-            <Switch
-              value={settings.reminderEnabled}
-              onValueChange={(reminderEnabled) => onChangeSettings({ ...settings, reminderEnabled })}
-              trackColor={{ false: c.line, true: c.moss }}
-            />
-          </View>
-          {settings.reminderEnabled ? (
-            <View style={styles.reminderRow}>
-              <Text style={styles.reminderLabel}>At</Text>
-              <DateTimePicker
-                value={time}
-                mode="time"
-                display="compact"
-                onChange={(_, picked) =>
-                  picked &&
-                  onChangeSettings({
-                    ...settings,
-                    reminderHour: picked.getHours(),
-                    reminderMinute: picked.getMinutes(),
-                  })
-                }
-              />
-            </View>
-          ) : null}
-        </View>
+        <ReminderCard settings={settings} onChange={onChangeSettings} />
 
         <TrackedList
           title="Products"
@@ -91,22 +54,7 @@ export function SetupScreen({
   );
 }
 
-const makeStyles = (c: Palette) =>
+const makeStyles = (_c: Palette) =>
   StyleSheet.create({
     container: { padding: space.lg, paddingBottom: 48 },
-    card: {
-      backgroundColor: c.surface,
-      borderRadius: radius.card,
-      padding: space.md,
-      marginBottom: space.xl,
-    },
-    title: { fontSize: 20, fontWeight: '700', color: c.ink, marginBottom: space.xs },
-    intro: { fontSize: 15, color: c.inkSoft, lineHeight: 22, marginBottom: space.md },
-    reminderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      minHeight: 44,
-    },
-    reminderLabel: { fontSize: 17, fontWeight: '600', color: c.ink },
   });

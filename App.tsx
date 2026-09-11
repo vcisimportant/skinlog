@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, AppState, Pressable, SafeAreaView, StyleSheet
 import { Backup } from './src/backup';
 import { todayKey } from './src/dates';
 import { migrateFactors, seedFactors } from './src/factors';
+import { requestPersistence } from './src/kv';
 import { applyReminder } from './src/notifications';
 import { ExportScreen } from './src/screens/ExportScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
@@ -43,6 +44,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [factors, setFactors] = useState<Factor[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [storagePersistent, setStoragePersistent] = useState<boolean | null>(null);
 
   // Mirrors of the state, so a save that lands while another is in flight builds
   // on the newer value rather than on whatever this render closed over.
@@ -74,6 +76,10 @@ export default function App() {
 
       if (!storedFactors || migrated.factors !== seeded) await saveFactors(migrated.factors);
       if (migrated.entries !== storedEntries) await saveEntries(migrated.entries);
+
+      // Ask the browser to exempt this data from routine eviction. A no-op on
+      // native, where the app's own container is already durable.
+      requestPersistence().then(setStoragePersistent, () => setStoragePersistent(false));
 
       // Re-arm on every launch, in case iOS dropped the schedule.
       applyReminder(storedSettings).catch(() => {});
@@ -196,8 +202,11 @@ export default function App() {
               entries={entries}
               products={products}
               factors={factors}
+              settings={settings}
+              storagePersistent={storagePersistent}
               onClear={handleClear}
               onRestore={handleRestore}
+              onChangeSettings={handleSettings}
             />
           )}
         </View>

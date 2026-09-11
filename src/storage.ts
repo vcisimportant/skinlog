@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getItem, removeItem, setItem } from './kv';
 import { Entry, Factor, Product, normalizeEntry } from './types';
 
 const ENTRIES = 'skinlog:entries:v1';
@@ -10,13 +10,21 @@ export type Settings = {
   reminderEnabled: boolean;
   reminderHour: number;
   reminderMinute: number;
+  lastBackupAt: string | null; // ISO date of the last backup saved
+  lastBackupDays: number; // how many days that backup held
 };
 
-export const DEFAULT_SETTINGS: Settings = { reminderEnabled: false, reminderHour: 21, reminderMinute: 0 };
+export const DEFAULT_SETTINGS: Settings = {
+  reminderEnabled: false,
+  reminderHour: 21,
+  reminderMinute: 0,
+  lastBackupAt: null,
+  lastBackupDays: 0,
+};
 
 export async function loadEntries(): Promise<Record<string, Entry>> {
   try {
-    const raw = await AsyncStorage.getItem(ENTRIES);
+    const raw = await getItem(ENTRIES);
     const parsed: Record<string, Entry> = raw ? JSON.parse(raw) : {};
     const out: Record<string, Entry> = {};
     for (const k of Object.keys(parsed)) out[k] = normalizeEntry(parsed[k]);
@@ -27,16 +35,16 @@ export async function loadEntries(): Promise<Record<string, Entry>> {
 }
 
 export async function saveEntries(entries: Record<string, Entry>): Promise<void> {
-  await AsyncStorage.setItem(ENTRIES, JSON.stringify(entries));
+  await setItem(ENTRIES, JSON.stringify(entries));
 }
 
 export async function clearEntries(): Promise<void> {
-  await AsyncStorage.removeItem(ENTRIES);
+  await removeItem(ENTRIES);
 }
 
 export async function loadProducts(): Promise<Product[]> {
   try {
-    const raw = await AsyncStorage.getItem(PRODUCTS);
+    const raw = await getItem(PRODUCTS);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -44,14 +52,14 @@ export async function loadProducts(): Promise<Product[]> {
 }
 
 export async function saveProducts(products: Product[]): Promise<void> {
-  await AsyncStorage.setItem(PRODUCTS, JSON.stringify(products));
+  await setItem(PRODUCTS, JSON.stringify(products));
 }
 
 // null means the list has never been saved, so the caller seeds the defaults.
 // An empty array means the user genuinely removed everything, which is respected.
 export async function loadFactors(): Promise<Factor[] | null> {
   try {
-    const raw = await AsyncStorage.getItem(FACTORS);
+    const raw = await getItem(FACTORS);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -59,12 +67,12 @@ export async function loadFactors(): Promise<Factor[] | null> {
 }
 
 export async function saveFactors(factors: Factor[]): Promise<void> {
-  await AsyncStorage.setItem(FACTORS, JSON.stringify(factors));
+  await setItem(FACTORS, JSON.stringify(factors));
 }
 
 export async function loadSettings(): Promise<Settings> {
   try {
-    const raw = await AsyncStorage.getItem(SETTINGS);
+    const raw = await getItem(SETTINGS);
     return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
@@ -72,5 +80,5 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  await AsyncStorage.setItem(SETTINGS, JSON.stringify(settings));
+  await setItem(SETTINGS, JSON.stringify(settings));
 }

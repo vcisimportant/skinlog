@@ -2,29 +2,49 @@ import * as Clipboard from 'expo-clipboard';
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Backup, buildBackup, parseBackup } from '../backup';
+import { backupStatus } from '../backupHealth';
 import { buildCsv } from '../csv';
 import { todayKey } from '../dates';
 import { pickTextFile, shareText } from '../files';
 import { analysisPrompt } from '../prompt';
 import { Palette, radius, space, usePalette } from '../theme';
+import { Settings } from '../storage';
 import { Entry, Factor, Product } from '../types';
 
 type Props = {
   entries: Record<string, Entry>;
   products: Product[];
   factors: Factor[];
+  settings: Settings;
+  storagePersistent: boolean | null;
   onClear: () => void;
   onRestore: (backup: Backup) => Promise<void>;
+  onChangeSettings: (settings: Settings) => void;
 };
 
 const reason = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong.');
 
-export function ExportScreen({ entries, products, factors, onClear, onRestore }: Props) {
+export function ExportScreen({
+  entries,
+  products,
+  factors,
+  settings,
+  storagePersistent,
+  onClear,
+  onRestore,
+  onChangeSettings,
+}: Props) {
   const c = usePalette();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [status, setStatus] = useState<string | null>(null);
   const count = Object.keys(entries).length;
   const csv = useMemo(() => buildCsv(entries, products, factors), [entries, products, factors]);
+  const warning = backupStatus({
+    days: count,
+    lastBackupAt: settings.lastBackupAt,
+    lastBackupDays: settings.lastBackupDays,
+    today: todayKey(),
+  });
 
   const flash = (msg: string) => {
     setStatus(msg);
@@ -50,6 +70,7 @@ export function ExportScreen({ entries, products, factors, onClear, onRestore }:
     try {
       const json = JSON.stringify(buildBackup(entries, products, factors), null, 2);
       await shareText(`skinlog-backup-${todayKey()}.json`, json, 'application/json', 'public.json');
+      onChangeSettings({ ...settings, lastBackupAt: new Date().toISOString(), lastBackupDays: count });
     } catch (e) {
       flash(reason(e));
     }
@@ -120,6 +141,17 @@ export function ExportScreen({ entries, products, factors, onClear, onRestore }:
         Your diary lives only on this phone. A backup is a single file you can keep in Files, Drive or your email, and
         restore onto a new phone. The CSV is for analysis; the backup is what brings your data back.
       </Text>
+      {warning ? (
+        <View style={[styles.warn, warning.level === 'shrunk' && styles.warnLoud]}>
+          <Text style={[styles.warnText, warning.level === 'shrunk' && styles.warnTextLoud]}>{warning.message}</Text>
+        </View>
+      ) : null}
+      {storagePersistent === false ? (
+        <Text style={styles.note}>
+          This browser has not granted protected storage yet. Adding Skinlog to your Home Screen and opening it
+          regularly usually earns it — until then, back up more often.
+        </Text>
+      ) : null}
       <Pressable accessibilityRole="button" onPress={saveBackup} disabled={count === 0} style={[styles.secondary, count === 0 && styles.disabled]}>
         <Text style={styles.secondaryText}>Save a backup file</Text>
       </Pressable>
@@ -153,6 +185,16 @@ const makeStyles = (c: Palette) =>
     },
     secondaryText: { color: c.moss, fontSize: 17, fontWeight: '600' },
     disabled: { opacity: 0.4 },
+    warn: {
+      backgroundColor: c.mossSoft,
+      borderRadius: radius.card,
+      padding: space.md,
+      marginBottom: space.sm,
+    },
+    warnLoud: { backgroundColor: c.flareSoft },
+    warnText: { fontSize: 14, color: c.ink, lineHeight: 20 },
+    warnTextLoud: { color: c.flare, fontWeight: '600' },
+    note: { fontSize: 13, color: c.inkSoft, lineHeight: 19, marginBottom: space.sm },
     status: { marginTop: space.md, color: c.moss, fontSize: 15, textAlign: 'center' },
     previewWrap: { marginTop: space.xl, backgroundColor: c.surface, borderRadius: radius.card, padding: space.md },
     previewLabel: { fontSize: 13, color: c.inkSoft, marginBottom: space.sm },
