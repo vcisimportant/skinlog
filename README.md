@@ -11,7 +11,7 @@ Everything is stored on the phone only. No accounts, no server.
 Skinlog runs as a web app, installed to your Home Screen. No App Store, no Apple developer
 account, nothing to pay.
 
-1. Open **https://YOUR-GITHUB-USERNAME.github.io/skinlog/** in Safari on the iPhone.
+1. Open **https://vcisimportant.github.io/skinlog/** in Safari on the iPhone.
 2. Tap the **Share** button, then **Add to Home Screen**.
 3. Open it from the icon, not from Safari.
 
