@@ -21,7 +21,7 @@ try {
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
 
   await page.goto(URL_, { waitUntil: 'networkidle0', timeout: 30000 });
-  await page.waitForFunction(() => document.body.innerText.includes('How does your skin look'), { timeout: 20000 });
+  await page.waitForFunction(() => /how does your skin look/i.test(document.body.innerText), { timeout: 20000 });
 
   // Prove the storage layer round-trips through IndexedDB, not localStorage.
   await page.evaluate(() => {

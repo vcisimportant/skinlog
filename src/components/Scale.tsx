@@ -26,7 +26,11 @@ export function Scale({ label, low, high, value, onChange }: Props) {
               accessibilityLabel={`${label} ${n} of 5`}
               accessibilityState={{ selected }}
               onPress={() => onChange(selected ? null : n)}
-              style={[styles.dot, { borderColor: c.scale[n - 1] }, selected && { backgroundColor: c.scale[n - 1] }]}
+              style={[
+                styles.dot,
+                { borderColor: c.scale[n - 1] },
+                selected && { backgroundColor: c.scale[n - 1] },
+              ]}
             >
               <Text style={[styles.dotText, selected && styles.dotTextSelected]}>{n}</Text>
             </Pressable>
@@ -44,7 +48,7 @@ export function Scale({ label, low, high, value, onChange }: Props) {
 const makeStyles = (c: Palette) =>
   StyleSheet.create({
     wrap: { marginBottom: space.lg },
-    label: { fontSize: 17, fontWeight: '600', color: c.ink, marginBottom: space.sm },
+    label: { fontSize: 17, fontWeight: '600', color: c.ink, marginBottom: space.md },
     row: { flexDirection: 'row', justifyContent: 'space-between' },
     dot: {
       width: 52,

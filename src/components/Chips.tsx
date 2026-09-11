@@ -46,7 +46,7 @@ const makeStyles = (c: Palette) =>
       borderColor: c.line,
       backgroundColor: c.surface,
     },
-    chipOn: { backgroundColor: c.ink, borderColor: c.ink },
-    text: { fontSize: 15, color: c.ink },
-    textOn: { color: c.bg },
+    chipOn: { backgroundColor: c.mossSoft, borderColor: c.moss },
+    text: { fontSize: 15, color: c.inkSoft },
+    textOn: { color: c.moss, fontWeight: '600' },
   });

@@ -22,7 +22,7 @@ export function LevelChip({ label, steps, value, onChange }: Props) {
       onPress={() => onChange(next)}
       style={[styles.chip, value === 1 && styles.some, value === 2 && styles.lot]}
     >
-      <Text style={[styles.text, value > 0 && styles.textOn]}>{text}</Text>
+      <Text style={[styles.text, value === 1 && styles.someText, value === 2 && styles.lotText]}>{text}</Text>
     </Pressable>
   );
 }
@@ -37,8 +37,9 @@ const makeStyles = (c: Palette) =>
       borderColor: c.line,
       backgroundColor: c.surface,
     },
-    some: { backgroundColor: c.amber, borderColor: c.amber },
+    some: { backgroundColor: c.amberSoft, borderColor: c.amber },
     lot: { backgroundColor: c.flare, borderColor: c.flare },
-    text: { fontSize: 15, color: c.ink },
-    textOn: { color: c.onAccent },
+    text: { fontSize: 15, color: c.inkSoft },
+    someText: { color: c.ink, fontWeight: '600' },
+    lotText: { color: c.onAccent, fontWeight: '600' },
   });

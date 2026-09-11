@@ -13,3 +13,6 @@ dist-web/
 # Never let a diary backup end up in a public repo
 skinlog-backup-*.json
 *.backup.json
+
+# Local design exploration, not part of the app
+design-variants/
