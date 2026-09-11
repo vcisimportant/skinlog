@@ -87,9 +87,19 @@ html = html.replace(
 html = html.replace(
   '</body>',
   `  <script>
+      // Cache-first means a relaunch is served the old copy while the new worker
+      // installs behind it, so an update would otherwise only appear on the
+      // launch after next. Reloading once when the new worker takes over makes
+      // it land immediately.
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('./sw.js').catch(function () {});
+          var reloaded = false;
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (reloaded) return;
+            reloaded = true;
+            window.location.reload();
+          });
         });
       }
     </script>
